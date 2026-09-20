@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-import uuid
 
 
 class MinimalSource(BaseModel):
@@ -7,7 +6,7 @@ class MinimalSource(BaseModel):
     first_character_index: int
     last_character_index: int
     document_length: int
-    terms: dict[str, int]
+    terms: dict[int, int]
 
     def __str__(self) -> str:
         return (
@@ -17,18 +16,12 @@ class MinimalSource(BaseModel):
 
 
 class FileIndex(BaseModel):
-    file_path: str
-    last_index: int
+    last_index: float
     chunks: list[MinimalSource]
 
 
 class Index(BaseModel):
-    files: list[FileIndex]
-    term_appearances: dict[str, int] # to change
+    files: dict[str, FileIndex]
+    term_appearances: dict[int, int]
     documents_number: int
     avg_doc_len: float
-
-
-class UnansweredQuestion(BaseModel): 
-    question_id: str = Field(default_factory(lambda: str(uuid.uuid4())))
-    question: str
