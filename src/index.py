@@ -22,7 +22,7 @@ class Indexer:
     def index(self):
         try:
             try:
-                with open(self._index_file, 'rb') as f:
+                with open(self._index_file, "rb") as f:
                     loaded = Index.model_validate(pickle.load(f))
 
                 if not loaded.files:
@@ -30,21 +30,21 @@ class Indexer:
 
                 self._result = loaded.model_dump()
             except FileNotFoundError:
-                print('\n=== Creating Index ===')
+                print("\n=== Creating Index ===")
                 raise
             except ValueError:
-                print('\n=== Found Empty index file. Creating new index ===')
+                print("\n=== Found Empty index file. Creating new index ===")
                 raise
             except (IOError, ValidationError):
-                print('\n=== Found Invalid index file. Creating new index ===')
+                print("\n=== Found Invalid index file. Creating new index ===")
                 raise
         except (FileNotFoundError, ValueError, IOError, ValidationError):
             self._init_index()
         else:
-            print('\n=== Index File Already Exists! Updating Old Index ===')
+            print("\n=== Index File Already Exists! Updating Old Index ===")
             self._update_index()
 
-        with open(self._index_file, 'wb') as f:
+        with open(self._index_file, "wb") as f:
             pickle.dump(self._result, f)
 
     def _init_index(self) -> None:
@@ -66,27 +66,29 @@ class Indexer:
 
         tokenize_chunk = self._tokenize_chunk()
 
-        for file_path, file in self._result['files'].items():
+        for file_path, file in self._result["files"].items():
             path = Path(file_path)
-            
-            if file['last_index'] < path.stat().st_mtime:
+
+            if file["last_index"] < path.stat().st_mtime:
                 self._chunk_file(
                     path,
                     self.max_chunk_size,
                     20 if self.max_chunk_size >= 100 else 0,
-                    path.stat().st_size
+                    path.stat().st_size,
                 )
-                
-                for chunk in file['chunks']:
+
+                for chunk in file["chunks"]:
                     tokenize_chunk(chunk)
 
                 print(f"[LOG] Updated '{file_path}' file index")
             else:
-                for chunk in file['chunks']:
+                for chunk in file["chunks"]:
                     self._result["documents_number"] += 1
-                    self._result["avg_doc_len"] += chunk['document_length']
-                    for term in chunk['terms'].keys():
-                        self._result["term_appearances"][term] = self._result["term_appearances"].get(term, 0) + 1
+                    self._result["avg_doc_len"] += chunk["document_length"]
+                    for term in chunk["terms"].keys():
+                        self._result["term_appearances"][term] = (
+                            self._result["term_appearances"].get(term, 0) + 1
+                        )
 
         self._result["avg_doc_len"] /= self._result["documents_number"]
 
@@ -125,10 +127,8 @@ class Indexer:
                 path,
                 self.max_chunk_size,
                 20 if self.max_chunk_size >= 100 else 0,
-                path.stat().st_size
+                path.stat().st_size,
             )
-
-            break
 
         self._result["avg_doc_len"] /= self._result["documents_number"]
 
@@ -151,7 +151,7 @@ class Indexer:
                         f"[WARNING] {type(e)}: {e}: Couldn't read file {chunk['file_path']}",
                     )
                     curr_file = (chunk["file_path"], None)
-                    return 
+                    return
 
             chunk_txt = curr_file[1][
                 chunk["first_character_index"] : chunk["last_character_index"]
@@ -167,7 +167,6 @@ class Indexer:
 
         return perform_tokenization
 
-
     def _tokenize(self):
         tokenize_chunk = self._tokenize_chunk()
 
@@ -180,7 +179,6 @@ class Indexer:
             ascii=True,
             desc="Tokenizing",
             unit="chunk",
-            total=self._result["documents_number"]
+            total=self._result["documents_number"],
         ):
             tokenize_chunk(chunk)
-

@@ -1,7 +1,8 @@
-import fire
-import json
+from src.search import Retriever
 from src.index import Indexer
 from src.llm import LLModel
+import fire
+import json
 
 
 class App:
@@ -9,14 +10,14 @@ class App:
         self.model = LLModel()
 
     def index(self, max_chunk_size: int = 2000):
-        Indexer(
-            self.model,
-            'data/raw/vllm-0.10.1',
-            max_chunk_size
-        ).index()
+        Indexer(self.model, "data/raw/vllm-0.10.1", max_chunk_size).index()
 
-    @staticmethod
-    def search(query: str, k: int = 50): ...
+    def search(self, query: str, k: int):
+        print(
+            "\n".join(
+                f"{src.file_path} [{src.first_character_index}:{src.last_character_index}]" for src in Retriever(self.model).score(query, k)
+            )
+        )
 
     @staticmethod
     def search_dataset(dataset_path: str, k: int, save_directory: str): ...
