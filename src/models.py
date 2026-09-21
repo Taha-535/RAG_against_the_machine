@@ -9,8 +9,8 @@ class MinimalSource(BaseModel):
     file_path: str
     first_character_index: int
     last_character_index: int
-    document_length: int
-    terms: Dict[int, int]
+    document_length: int = None
+    terms: Dict[int, int] = None
 
     def _key(self) -> tuple[str, int, int, int]:
         return (

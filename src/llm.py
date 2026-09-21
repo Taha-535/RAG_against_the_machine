@@ -17,7 +17,7 @@ class LLModel:
     def decode(self, txt_ids: list[int]) -> str:
         return self._tokenizer.decode(txt_ids, skip_special_tokens=True).strip('\n')
 
-    def ask(self, query: str, sources: list[MinimalSource]) -> str:
+    def answer(self, query: str, sources: list[MinimalSource]) -> str:
         chunks_txt = []
 
         for source in sources:
@@ -26,8 +26,6 @@ class LLModel:
 
             with open(source.file_path) as f:
                 chunks_txt.append(f.read()[fst : lst + 1])
-
-        print('\n'.join(chunks_txt))
 
         prompt = (
             "Your task is to answer the asked question from the given documents."

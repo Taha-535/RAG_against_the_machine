@@ -94,7 +94,12 @@ class Retriever:
     ) -> StudentSearchResults:
         search_results = []
 
-        for question in tqdm(dataset.rag_questions):
+        for question in tqdm(
+            dataset.rag_questions,
+            desc="Searching",
+            ascii=True,
+            unit="question",
+        ):
             search_results.append(
                 MinimalSearchResults(
                     question_id=question.question_id,
