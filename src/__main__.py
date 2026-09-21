@@ -67,7 +67,8 @@ class App:
         except IOError as e:
             print(e, file=sys.stderr)
 
-    def answer(self, query: str, k: int): ...
+    def answer(self, query: str, k: int):
+        print(self.model.ask(query, Retriever(self.model).score(query, k)))
 
     def answer_dataset(
         self, student_search_results_path: str, save_directory: str
