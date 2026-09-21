@@ -1,4 +1,11 @@
-from src.models import Index, UnansweredQuestion, MinimalSource
+from src.models import (
+    Index,
+    UnansweredQuestion,
+    MinimalSource,
+    StudentSearchResults,
+    RagDataset,
+    MinimalSearchResults,
+)
 from pydantic import ValidationError
 from heapq import heappush, heappop
 from src.llm import LLModel
@@ -43,7 +50,7 @@ class _BM25:
 class Retriever:
     def __init__(self, model: LLModel) -> None:
         try:
-            with open("data/processed/index", 'rb') as f:
+            with open("data/processed/index", "rb") as f:
                 self.index = Index.model_validate(pickle.load(f))
         except (IOError, pickle.PickleError, ValidationError) as e:
             print("Error loading Index!!", file=sys.stderr)
@@ -62,15 +69,10 @@ class Retriever:
         query_token_ids = self._model.encode(query)
         score_heap = []
 
-        for chunk in tqdm(
-            (
-                chunk
-                for file in self.index.files.values()
-                for chunk in file.chunks
-            ),
-            total=self.index.documents_number,
-            unit="document",
-            ascii=True,
+        for chunk in (
+            chunk
+            for file in self.index.files.values()
+            for chunk in file.chunks
         ):
             heappush(
                 score_heap,
@@ -86,3 +88,19 @@ class Retriever:
             heappop(score_heap)[1]
             for _ in range(k if len(score_heap) >= k else len(score_heap))
         ]
+
+    def search_dataset(
+        self, dataset: RagDataset, k: int
+    ) -> StudentSearchResults:
+        search_results = []
+
+        for question in tqdm(dataset.rag_questions):
+            search_results.append(
+                MinimalSearchResults(
+                    question_id=question.question_id,
+                    question=question.question,
+                    retrieved_sources=self.score(question.question, k),
+                )
+            )
+
+        return StudentSearchResults(search_results=search_results, k=k)
