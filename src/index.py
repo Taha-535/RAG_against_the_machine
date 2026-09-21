@@ -66,10 +66,24 @@ class Indexer:
 
         tokenize_chunk = self._tokenize_chunk()
 
-        for file_path, file in self._result["files"].items():
-            path = Path(file_path)
+        paths = list(self.data_collection_path.glob("**/*.md")) + list(
+            self.data_collection_path.glob("**/*.py")
+        )
 
-            if file["last_index"] < path.stat().st_mtime:
+        for file in set(self._result["files"].keys()).difference(
+            {str(path) for path in paths}
+        ):
+            del self._result["files"][file]
+
+        for path in tqdm(
+            paths,
+            ascii=True,
+            desc="Updating",
+            unit="file",
+        ):
+            file = self._result["files"].get(str(path))
+
+            if file is None or file["last_index"] < path.stat().st_mtime:
                 self._chunk_file(
                     path,
                     self.max_chunk_size,
@@ -77,10 +91,11 @@ class Indexer:
                     path.stat().st_size,
                 )
 
+                if file is None:
+                    file = self._result["files"][str(path)]
+
                 for chunk in file["chunks"]:
                     tokenize_chunk(chunk)
-
-                print(f"[LOG] Updated '{file_path}' file index")
             else:
                 for chunk in file["chunks"]:
                     self._result["documents_number"] += 1
