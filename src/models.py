@@ -10,7 +10,7 @@ class MinimalSource(BaseModel):
     first_character_index: int
     last_character_index: int
     document_length: int = None
-    terms: Dict[int, int] = None
+    terms: Dict[str, int] = None
 
     def _key(self) -> tuple[str, int, int, int]:
         return (
@@ -44,7 +44,7 @@ class FileIndex(BaseModel):
 
 class Index(BaseModel):
     files: Dict[str, FileIndex]
-    term_appearances: Dict[int, int]
+    term_appearances: Dict[str, int]
     documents_number: int
     avg_doc_len: float
 

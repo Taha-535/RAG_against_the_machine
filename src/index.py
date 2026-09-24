@@ -11,13 +11,14 @@ import os
 
 class Indexer:
     def __init__(
-        self, model: LLModel, data_collection_path: str, max_chunk_size: int
+        self, split_terms: callable, data_collection_path: str, max_chunk_size: int
     ) -> None:
         self.data_collection_path = Path(data_collection_path)
         self.max_chunk_size = max_chunk_size
-        self.model = model
 
         self._index_file = "data/processed/index"
+        
+        self._split_terms = split_terms
 
     def index(self):
         try:
@@ -26,6 +27,10 @@ class Indexer:
                     loaded = Index.model_validate(pickle.load(f))
 
                 if not loaded.files:
+                    raise ValueError
+
+                file_name = list(loaded.files.keys())[0]
+                if Path(__file__).stat().st_mtime > loaded.files[file_name].last_index:
                     raise ValueError
 
                 self._result = loaded.model_dump()
@@ -87,7 +92,6 @@ class Indexer:
                 self._chunk_file(
                     path,
                     self.max_chunk_size,
-                    20 if self.max_chunk_size >= 100 else 0,
                     path.stat().st_size,
                 )
 
@@ -107,14 +111,14 @@ class Indexer:
 
         self._result["avg_doc_len"] /= self._result["documents_number"]
 
-    def _chunk_file(self, path: Path, n: int, o: int, txt_len: int):
+    def _chunk_file(self, path: Path, n: int, txt_len: int):
 
         self._result["files"][str(path)] = {"last_index": time(), "chunks": []}
 
         # Character Based Chunking
 
         for k in range(txt_len // n + 1):
-            fst = k * (n - o)
+            fst = k * n
             lst = fst + n - 1 if fst + n < txt_len else txt_len - 1
 
             self._result["files"][str(path)]["chunks"].append(
@@ -141,7 +145,6 @@ class Indexer:
             self._chunk_file(
                 path,
                 self.max_chunk_size,
-                20 if self.max_chunk_size >= 100 else 0,
                 path.stat().st_size,
             )
 
@@ -173,7 +176,7 @@ class Indexer:
                 + 1
             ]
 
-            for token_id in self.model.encode(chunk_txt):
+            for token_id in self._split_terms(chunk_txt):
                 chunk["terms"][token_id] = chunk["terms"].get(token_id, 0) + 1
                 if chunk["terms"][token_id] == 1:
                     self._result["term_appearances"][token_id] = (

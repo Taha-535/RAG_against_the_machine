@@ -41,7 +41,7 @@ class LLModel:
             messages,
             tokenize=False,
             add_generation_prompt=True,
-            enable_thinking=True
+            enable_thinking=False
         )
 
         model_inputs = self._tokenizer([text], return_tensors="pt").to(self._model.device)
@@ -51,6 +51,5 @@ class LLModel:
         )
 
         output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
-        index = len(output_ids) - output_ids[::-1].index(151668)
     
-        return self.decode(output_ids[index:])
+        return self.decode(output_ids)

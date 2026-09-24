@@ -12,6 +12,7 @@ from pathlib import Path
 import fire
 import json
 import sys
+import re
 
 
 def _get_data_and_output_path(
@@ -51,26 +52,40 @@ def _dump_results_model(model: BaseModel) -> dict:
         }
     )
 
+def _term_splitter(text: str) -> list[str]:
+    terms = []
+
+    for match in re.finditer(r"([a-zA-Z1-9]+)(?:[-_']([a-zA-Z1-9]+))?", text):
+        composed, fst, sec = match.group(0, 1, 2)
+
+        if sec is not None:
+            terms.extend([composed, fst, sec])
+        else:
+            terms.append(composed)
+
+    return terms
+
 
 class App:
-    def __init__(self) -> None:
-        self.model = LLModel()
 
-    def index(self, max_chunk_size: int = 2000):
-        Indexer(self.model, "data/raw/vllm-0.10.1", max_chunk_size).index()
+    @staticmethod
+    def index(max_chunk_size: int = 2000):
+        Indexer(_term_splitter, "data/raw/vllm-0.10.1", max_chunk_size).index()
 
-    def search(self, query: str, k: int):
+    @staticmethod
+    def search(query: str, k: int):
         print(
             "\n".join(
                 (
                     f"{src.file_path} "
                     f"[{src.first_character_index}:{src.last_character_index}]"
                 )
-                for src in Retriever(self.model).score(query, k)
+                for src in Retriever(_term_splitter).score(query, k)
             )
         )
 
-    def search_dataset(self, dataset_path: str, k: int, save_directory: str):
+    @staticmethod
+    def search_dataset(dataset_path: str, k: int, save_directory: str):
         try:
             dataset, output_path = _get_data_and_output_path(
                 RagDataset, dataset_path, save_directory
@@ -82,7 +97,7 @@ class App:
             with open(output_path, "w") as f:
                 json.dump(
                     _dump_results_model(
-                        Retriever(self.model).search_dataset(dataset, k)
+                        Retriever(_term_splitter).search_dataset(dataset, k)
                     ),
                     f,
                     indent=4,
@@ -90,11 +105,13 @@ class App:
         except IOError as e:
             print(e, file=sys.stderr)
 
-    def answer(self, query: str, k: int):
-        print(self.model.answer(query, Retriever(self.model).score(query, k)))
+    @staticmethod
+    def answer(query: str, k: int):
+        print(LLModel().answer(query, Retriever(_term_splitter).score(query, k)))
 
+    @staticmethod
     def answer_dataset(
-        self, student_search_results_path: str, save_directory: str
+        student_search_results_path: str, save_directory: str
     ):
         try:
             dataset, output_path = _get_data_and_output_path(
@@ -113,7 +130,7 @@ class App:
                                     question_id=search_result.question_id,
                                     question=search_result.question,
                                     retrieved_sources=search_result.retrieved_sources,
-                                    answer=self.model.answer(
+                                    answer=LLModel().answer(
                                         search_result.question,
                                         search_result.retrieved_sources,
                                     ),

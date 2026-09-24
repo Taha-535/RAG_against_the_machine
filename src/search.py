@@ -27,11 +27,11 @@ class _BM25:
         )
 
     @staticmethod
-    def _rtf(term: int, document: dict[int, int]) -> float:
+    def _rtf(term: str, document: dict[str, int], len_norm: float) -> float:
         k = 1.5
         freq = document.get(term, 0)
 
-        return (freq * (k + 1)) / (freq + k)
+        return (freq * (k + 1)) / (freq + k * len_norm)
 
     def _len_norm(self, doc_len: int) -> float:
         b = 0.75
@@ -39,16 +39,16 @@ class _BM25:
         return 1 - b + (b * doc_len / self.avgdl)
 
     def bm25(
-        self, query: list[int], doc: dict[int, int], doc_len: int
+        self, query: list[str], doc: dict[str, int], doc_len: int
     ) -> float:
         return sum(
-            self._idf(term) * self._rtf(term, doc) / self._len_norm(doc_len)
+            self._idf(term) * self._rtf(term, doc, self._len_norm(doc_len))
             for term in query
         )
 
 
 class Retriever:
-    def __init__(self, model: LLModel) -> None:
+    def __init__(self, split_terms: callable) -> None:
         try:
             with open("data/processed/index", "rb") as f:
                 self.index = Index.model_validate(pickle.load(f))
@@ -57,7 +57,7 @@ class Retriever:
             print(f"{type(e).__name__}: {e}", file=sys.stderr)
             exit(2)
 
-        self._model = model
+        self._split_terms = split_terms
 
         self._bm25 = _BM25(
             self.index.documents_number,
@@ -66,7 +66,7 @@ class Retriever:
         )
 
     def score(self, query: str, k: int) -> list[tuple[int, MinimalSource]]:
-        query_token_ids = self._model.encode(query)
+        query_token_ids = self._split_terms(query)
         score_heap = []
 
         for chunk in (
@@ -77,7 +77,7 @@ class Retriever:
             heappush(
                 score_heap,
                 (
-                    self._bm25.bm25(
+                    - self._bm25.bm25(
                         query_token_ids, chunk.terms, chunk.document_length
                     ),
                     chunk,
