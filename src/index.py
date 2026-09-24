@@ -11,13 +11,16 @@ import os
 
 class Indexer:
     def __init__(
-        self, split_terms: callable, data_collection_path: str, max_chunk_size: int
+        self,
+        split_terms: callable,
+        data_collection_path: str,
+        max_chunk_size: int,
     ) -> None:
         self.data_collection_path = Path(data_collection_path)
         self.max_chunk_size = max_chunk_size
 
         self._index_file = "data/processed/index"
-        
+
         self._split_terms = split_terms
 
     def index(self):
@@ -30,7 +33,10 @@ class Indexer:
                     raise ValueError
 
                 file_name = list(loaded.files.keys())[0]
-                if Path(__file__).stat().st_mtime > loaded.files[file_name].last_index:
+                if (
+                    Path(__file__).stat().st_mtime
+                    > loaded.files[file_name].last_index
+                ):
                     raise ValueError
 
                 self._result = loaded.model_dump()

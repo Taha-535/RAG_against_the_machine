@@ -77,7 +77,7 @@ class Retriever:
             heappush(
                 score_heap,
                 (
-                    - self._bm25.bm25(
+                    -self._bm25.bm25(
                         query_token_ids, chunk.terms, chunk.document_length
                     ),
                     chunk,

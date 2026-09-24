@@ -15,7 +15,9 @@ class LLModel:
         return self._tokenizer.encode(txt)
 
     def decode(self, txt_ids: list[int]) -> str:
-        return self._tokenizer.decode(txt_ids, skip_special_tokens=True).strip('\n')
+        return self._tokenizer.decode(txt_ids, skip_special_tokens=True).strip(
+            "\n"
+        )
 
     def answer(self, query: str, sources: list[MinimalSource]) -> str:
         chunks_txt = []
@@ -41,15 +43,18 @@ class LLModel:
             messages,
             tokenize=False,
             add_generation_prompt=True,
-            enable_thinking=False
+            enable_thinking=False,
         )
 
-        model_inputs = self._tokenizer([text], return_tensors="pt").to(self._model.device)
+        model_inputs = self._tokenizer([text], return_tensors="pt").to(
+            self._model.device
+        )
         generated_ids = self._model.generate(
-            **model_inputs,
-            max_new_tokens=32768
+            **model_inputs, max_new_tokens=32768
         )
 
-        output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
-    
+        output_ids = generated_ids[0][
+            len(model_inputs.input_ids[0]) :
+        ].tolist()
+
         return self.decode(output_ids)
