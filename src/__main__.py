@@ -5,6 +5,7 @@ from src.models import (
     MinimalAnswer,
 )
 from pydantic import BaseModel, ValidationError
+from src.evaluate import Evaluator
 from src.search import Retriever
 from src.index import Indexer
 from src.llm import LLModel
@@ -15,20 +16,25 @@ import sys
 import re
 
 
-def _get_data_and_output_path(
-    model: type, data_path: str, save_directory: str
-):
+def _get_data(model: type, data_path: str):
     try:
         with open(data_path) as f:
             dataset = model.model_validate_json(f.read())
-    except (IOError, ValidationError) as e:
+    except IOError as e:
         print(
             "Error loading dataset!",
             f"{type(e).__name__}: {e}",
             file=sys.stderr,
         )
-        raise
+        exit(1)
+    except ValidationError as e:
+        print((f"Invalid data in {data_path}\n{e}"), file=sys.stderr)
+        exit(1)
 
+    return dataset
+
+
+def _get_output_path(data_path: str, save_directory: str):
     try:
         dir_path = Path(save_directory)
         dir_path.mkdir(parents=True, exist_ok=True)
@@ -36,7 +42,16 @@ def _get_data_and_output_path(
         print(e, file=sys.stderr)
         raise
 
-    return dataset, Path(str(dir_path) + "/" + Path(data_path).name)
+    return Path(str(dir_path) + "/" + Path(data_path).name)
+
+
+def _get_data_and_output_path(
+    model: type, data_path: str, save_directory: str
+):
+
+    return _get_data(model, data_path), _get_output_path(
+        data_path, save_directory
+    )
 
 
 def _dump_results_model(model: BaseModel) -> dict:
@@ -51,6 +66,7 @@ def _dump_results_model(model: BaseModel) -> dict:
             }
         }
     )
+
 
 def _term_splitter(text: str) -> list[str]:
     terms = []
@@ -67,7 +83,6 @@ def _term_splitter(text: str) -> list[str]:
 
 
 class App:
-
     @staticmethod
     def index(max_chunk_size: int = 2000):
         Indexer(_term_splitter, "data/raw/vllm-0.10.1", max_chunk_size).index()
@@ -107,15 +122,17 @@ class App:
 
     @staticmethod
     def answer(query: str, k: int):
-        print(LLModel().answer(query, Retriever(_term_splitter).score(query, k)))
+        print(
+            LLModel().answer(query, Retriever(_term_splitter).score(query, k))
+        )
 
     @staticmethod
-    def answer_dataset(
-        student_search_results_path: str, save_directory: str
-    ):
+    def answer_dataset(student_search_results_path: str, save_directory: str):
         try:
             dataset, output_path = _get_data_and_output_path(
-                StudentSearchResults, student_search_results_path, save_directory
+                StudentSearchResults,
+                student_search_results_path,
+                save_directory,
             )
         except (IOError, ValidationError, FileExistsError):
             exit(1)
@@ -145,10 +162,18 @@ class App:
                 )
         except IOError as e:
             print(e, file=sys.stderr)
+            exit(1)
 
     def evaluate(
-        self, student_search_results_path: str, dataset_path: str
-    ): ...
+        self,
+        student_search_results_path: str,
+        dataset_path: str,
+        max_context_length: int = 2000,
+    ):
+        results = _get_data(StudentSearchResults, student_search_results_path)
+        dataset = _get_data(RagDataset, dataset_path)
+
+        Evaluator(results, dataset, max_context_length).evaluate()
 
 
 if __name__ == "__main__":

@@ -31,10 +31,7 @@ class MinimalSource(BaseModel):
         return self._key() < other._key()
 
     def __str__(self) -> str:
-        return (
-            f"[{self.last_character_index - self.first_character_index}]"
-            f" chars: {self.file_path}"
-        )
+        return f"{self.file_path}[{self.last_character_index}:{self.first_character_index}]"
 
 
 class FileIndex(BaseModel):
@@ -55,6 +52,8 @@ class UnansweredQuestion(BaseModel):
 
 
 class AnsweredQuestion(UnansweredQuestion):
+    # question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    # question: str
     sources: List[MinimalSource]
     answer: str
 
