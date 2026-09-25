@@ -10,6 +10,7 @@ class MinimalSource(BaseModel):
     first_character_index: int
     last_character_index: int
     document_length: int = None
+    embedding: list[float] = None
     terms: Dict[str, int] = None
 
     def _key(self) -> tuple[str, int, int, int]:

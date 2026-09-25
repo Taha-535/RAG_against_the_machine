@@ -1,6 +1,21 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from sentence_transformers import SentenceTransformer
 from huggingface_hub import hf_hub_download
 from src.models import MinimalSource
+
+
+class Embedder:
+    def __init__(self) -> None:
+        self._model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+    def embed(self, text: str) -> ...:
+        return self._model.encode(text)
+
+    def similarity(self, embed1: list[float], embed2: list[float]) -> float:
+        if embed2 is None:
+            return 1
+
+        return self._model.similarity(embed1, embed2)
 
 
 class LLModel:

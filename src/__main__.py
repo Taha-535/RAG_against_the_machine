@@ -60,7 +60,7 @@ def _dump_results_model(model: BaseModel) -> dict:
             "search_results": {
                 "__all__": {
                     "retrieved_sources": {
-                        "__all__": {"document_length", "terms"}
+                        "__all__": {"document_length", "terms", "embedding"}
                     }
                 }
             }
@@ -84,8 +84,19 @@ def _term_splitter(text: str) -> list[str]:
 
 class App:
     @staticmethod
-    def index(max_chunk_size: int = 2000):
-        Indexer(_term_splitter, "data/raw/vllm-0.10.1", max_chunk_size).index()
+    def index(
+        max_chunk_size: int = 2000,
+        index_file: str = "index.pkl",
+        raw_data: str = "vllm-0.10.1",
+        embed: bool = False,
+    ):
+        Indexer(
+            _term_splitter,
+            raw_data,
+            index_file,
+            max_chunk_size,
+            embed
+        ).index()
 
     @staticmethod
     def search(query: str, k: int):

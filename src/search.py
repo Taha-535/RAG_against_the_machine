@@ -6,9 +6,9 @@ from src.models import (
     RagDataset,
     MinimalSearchResults,
 )
+from src.llm import LLModel, Embedder
 from pydantic import ValidationError
 from heapq import heappush, heappop
-from src.llm import LLModel
 from tqdm import tqdm
 import numpy as np
 import pickle
@@ -65,6 +65,8 @@ class Retriever:
             self.index.avg_doc_len,
         )
 
+        self._embedder = Embedder()
+
     def score(self, query: str, k: int) -> list[tuple[int, MinimalSource]]:
         query_token_ids = self._split_terms(query)
         score_heap = []
@@ -74,12 +76,13 @@ class Retriever:
             for file in self.index.files.values()
             for chunk in file.chunks
         ):
+            query_embed = self._embedder.embed(query)
             heappush(
                 score_heap,
                 (
                     -self._bm25.bm25(
                         query_token_ids, chunk.terms, chunk.document_length
-                    ),
+                    ) * self._embedder.similarity(query_embed, chunk.embedding),
                     chunk,
                 ),
             )

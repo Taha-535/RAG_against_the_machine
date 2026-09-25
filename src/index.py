@@ -1,6 +1,7 @@
+from src.llm import LLModel, Embedder
 from pydantic import ValidationError
 from src.models import Index
-from src.llm import LLModel
+from typing import Optional
 from pathlib import Path
 from time import time
 from tqdm import tqdm
@@ -14,14 +15,18 @@ class Indexer:
         self,
         split_terms: callable,
         data_collection_path: str,
+        index_path: str,
         max_chunk_size: int,
+        embed: bool,
     ) -> None:
-        self.data_collection_path = Path(data_collection_path)
+        self.data_collection_path = Path(f"data/raw/{data_collection_path}")
         self.max_chunk_size = max_chunk_size
 
-        self._index_file = "data/processed/index"
+        self._index_file = f"data/processed/{index_path}"
 
         self._split_terms = split_terms
+
+        self._embedder: Optional[Embedder] = Embedder() if embed else None
 
     def index(self):
         try:
@@ -30,21 +35,21 @@ class Indexer:
                     loaded = Index.model_validate(pickle.load(f))
 
                 if not loaded.files:
-                    raise ValueError
+                    raise ValueError("Found Empty index file")
 
                 file_name = list(loaded.files.keys())[0]
                 if (
                     Path(__file__).stat().st_mtime
                     > loaded.files[file_name].last_index
                 ):
-                    raise ValueError
+                    raise ValueError("Indexing code was changed")
 
                 self._result = loaded.model_dump()
             except FileNotFoundError:
                 print("\n=== Creating Index ===")
                 raise
-            except ValueError:
-                print("\n=== Found Empty index file. Creating new index ===")
+            except ValueError as e:
+                print(f"\n=== {e}. Creating new index ===")
                 raise
             except (IOError, ValidationError):
                 print("\n=== Found Invalid index file. Creating new index ===")
@@ -70,6 +75,36 @@ class Indexer:
 
         self._tokenize()
 
+    def _update_embedding(self) -> callable:
+        curr_file = ("", "")
+
+        def main_function(chunk) -> list[float]:
+            nonlocal curr_file
+            nonlocal self
+
+            if curr_file[0] != chunk["file_path"]:
+                if curr_file[1] is None:
+                    return
+
+                try:
+                    with open(chunk["file_path"]) as f:
+                        curr_file = (chunk["file_path"], f.read())
+                except IOError as e:
+                    print(
+                        f"[WARNING] {type(e)}: {e}: Couldn't read file {chunk['file_path']}",
+                    )
+                    curr_file = (chunk["file_path"], None)
+                    return
+
+            chunk_txt = curr_file[1][
+                chunk["first_character_index"] : chunk["last_character_index"]
+                + 1
+            ]
+
+            chunk["embedding"] = self._embedder.embed(chunk_txt).tolist()
+
+        return main_function
+
     def _update_index(self) -> None:
         self._result["documents_number"] = 0
         self._result["avg_doc_len"] = 0
@@ -85,6 +120,8 @@ class Indexer:
             {str(path) for path in paths}
         ):
             del self._result["files"][file]
+
+        update_embedding = self._update_embedding()
 
         for path in tqdm(
             paths,
@@ -108,6 +145,11 @@ class Indexer:
                     tokenize_chunk(chunk)
             else:
                 for chunk in file["chunks"]:
+                    if self._embedder is None:
+                        chunk["embedding"] = None
+                    elif chunk["embedding"] is None:
+                        update_embedding(chunk)
+
                     self._result["documents_number"] += 1
                     self._result["avg_doc_len"] += chunk["document_length"]
                     for term in chunk["terms"].keys():
@@ -181,6 +223,12 @@ class Indexer:
                 chunk["first_character_index"] : chunk["last_character_index"]
                 + 1
             ]
+
+            chunk["embedding"] = (
+                self._embedder.embed(chunk_txt).tolist()
+                if self._embedder is not None
+                else None
+            )
 
             for token_id in self._split_terms(chunk_txt):
                 chunk["terms"][token_id] = chunk["terms"].get(token_id, 0) + 1
