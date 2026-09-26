@@ -6,6 +6,7 @@ from src.models import (
     RagDataset,
     MinimalSearchResults,
 )
+from src.helper import term_splitter
 from src.llm import LLModel, Embedder
 from pydantic import ValidationError
 from heapq import heappush, heappop
@@ -48,7 +49,7 @@ class _BM25:
 
 
 class Retriever:
-    def __init__(self, split_terms: callable) -> None:
+    def __init__(self) -> None:
         try:
             with open("data/processed/index.pkl", "rb") as f:
                 self.index = Index.model_validate(pickle.load(f))
@@ -56,8 +57,6 @@ class Retriever:
             print("Error loading Index!!", file=sys.stderr)
             print(f"{type(e).__name__}: {e}", file=sys.stderr)
             exit(2)
-
-        self._split_terms = split_terms
 
         self._bm25 = _BM25(
             self.index.documents_number,
@@ -67,8 +66,10 @@ class Retriever:
 
         self._embedder = Embedder()
 
-    def score(self, query: str, k: int, embed: bool) -> list[tuple[int, MinimalSource]]:
-        query_token_ids = self._split_terms(query)
+    def score(
+        self, query: str, k: int, embed: bool
+    ) -> list[tuple[int, MinimalSource]]:
+        query_token_ids = term_splitter(query)
         score_heap = []
 
         for chunk in (
@@ -83,7 +84,8 @@ class Retriever:
                 (
                     -self._bm25.bm25(
                         query_token_ids, chunk.terms, chunk.document_length
-                    ) * self._embedder.similarity(query_embed, chunk.embedding),
+                    )
+                    * self._embedder.similarity(query_embed, chunk.embedding),
                     chunk,
                 ),
             )
