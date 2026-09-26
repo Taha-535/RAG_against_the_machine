@@ -50,7 +50,7 @@ class _BM25:
 class Retriever:
     def __init__(self, split_terms: callable) -> None:
         try:
-            with open("data/processed/index", "rb") as f:
+            with open("data/processed/index.pkl", "rb") as f:
                 self.index = Index.model_validate(pickle.load(f))
         except (IOError, pickle.PickleError, ValidationError) as e:
             print("Error loading Index!!", file=sys.stderr)
@@ -67,7 +67,7 @@ class Retriever:
 
         self._embedder = Embedder()
 
-    def score(self, query: str, k: int) -> list[tuple[int, MinimalSource]]:
+    def score(self, query: str, k: int, embed: bool) -> list[tuple[int, MinimalSource]]:
         query_token_ids = self._split_terms(query)
         score_heap = []
 
@@ -76,7 +76,8 @@ class Retriever:
             for file in self.index.files.values()
             for chunk in file.chunks
         ):
-            query_embed = self._embedder.embed(query)
+            query_embed = self._embedder.embed(query) if embed else None
+
             heappush(
                 score_heap,
                 (
@@ -93,7 +94,7 @@ class Retriever:
         ]
 
     def search_dataset(
-        self, dataset: RagDataset, k: int
+        self, dataset: RagDataset, k: int, embed: bool
     ) -> StudentSearchResults:
         search_results = []
 
@@ -107,7 +108,7 @@ class Retriever:
                 MinimalSearchResults(
                     question_id=question.question_id,
                     question=question.question,
-                    retrieved_sources=self.score(question.question, k),
+                    retrieved_sources=self.score(question.question, k, embed),
                 )
             )
 

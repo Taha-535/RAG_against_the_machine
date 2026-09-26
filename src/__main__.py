@@ -99,19 +99,19 @@ class App:
         ).index()
 
     @staticmethod
-    def search(query: str, k: int):
+    def search(query: str, k: int, embed: bool = False):
         print(
             "\n".join(
                 (
                     f"{src.file_path} "
                     f"[{src.first_character_index}:{src.last_character_index}]"
                 )
-                for src in Retriever(_term_splitter).score(query, k)
+                for src in Retriever(_term_splitter).score(query, k, embed)
             )
         )
 
     @staticmethod
-    def search_dataset(dataset_path: str, k: int, save_directory: str):
+    def search_dataset(dataset_path: str, k: int, save_directory: str, embed: bool = False):
         try:
             dataset, output_path = _get_data_and_output_path(
                 RagDataset, dataset_path, save_directory
@@ -123,7 +123,7 @@ class App:
             with open(output_path, "w") as f:
                 json.dump(
                     _dump_results_model(
-                        Retriever(_term_splitter).search_dataset(dataset, k)
+                        Retriever(_term_splitter).search_dataset(dataset, k, embed)
                     ),
                     f,
                     indent=4,

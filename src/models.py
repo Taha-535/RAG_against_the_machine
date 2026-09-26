@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Optional
 from functools import total_ordering
 from typing import List, Dict
 import uuid
@@ -9,9 +10,9 @@ class MinimalSource(BaseModel):
     file_path: str
     first_character_index: int
     last_character_index: int
-    document_length: int = None
-    embedding: list[float] = None
-    terms: Dict[str, int] = None
+    document_length: Optional[int] = None
+    embedding: Optional[list[float]] = None
+    terms: Optional[Dict[str, int]] = None
 
     def _key(self) -> tuple[str, int, int, int]:
         return (
@@ -32,7 +33,7 @@ class MinimalSource(BaseModel):
         return self._key() < other._key()
 
     def __str__(self) -> str:
-        return f"{self.file_path}[{self.last_character_index}:{self.first_character_index}]"
+        return f"{self.file_path}[{self.first_character_index}:{self.last_character_index}]"
 
 
 class FileIndex(BaseModel):
