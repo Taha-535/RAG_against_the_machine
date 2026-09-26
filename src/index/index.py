@@ -19,7 +19,7 @@ class Indexer:
         self.data_collection_path = Path(f"data/raw/{data_collection_path}")
         self.max_chunk_size = max_chunk_size
 
-        self._index_file = f"data/processed/index.pkl"
+        self._index_file = "data/processed/index.pkl"
 
         self._embedder: Optional[Embedder] = Embedder() if embed else None
 

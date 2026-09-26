@@ -13,10 +13,12 @@ def retrieve_chunk_content(
             with open(chunk["file_path"]) as f:
                 curr_file = (chunk["file_path"], f.read())
         except IOError as e:
-            print((
-                f"[WARNING] {type(e)}: {e}: "
-                f"Couldn't read file {chunk['file_path']}",
-            ))
+            print(
+                (
+                    f"[WARNING] {type(e)}: {e}: "
+                    f"Couldn't read file {chunk['file_path']}",
+                )
+            )
             curr_file = (chunk["file_path"], None)
             return
 

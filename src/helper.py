@@ -1,5 +1,6 @@
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel
 from pathlib import Path
+import sys
 import re
 
 
@@ -32,16 +33,14 @@ def get_output_path(data_path: str, save_directory: str):
     return Path(str(dir_path) + "/" + Path(data_path).name)
 
 
-def get_data_and_output_path(
-    model: type, data_path: str, save_directory: str
-):
+def get_data_and_output_path(model: type, data_path: str, save_directory: str):
 
     return get_data(model, data_path), get_output_path(
         data_path, save_directory
     )
 
 
-def dump_results_model(model: type) -> dict:
+def dump_results_model(model: BaseModel) -> dict:
     return model.model_dump(
         exclude={
             "search_results": {

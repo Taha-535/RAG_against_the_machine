@@ -6,16 +6,14 @@ from src.models import (
 )
 from src.helper import (
     get_data,
-    get_output_path,
     get_data_and_output_path,
     dump_results_model,
 )
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 from src.evaluate import Evaluator
 from src.search import Retriever
 from src.index import Indexer
 from src.llm import LLModel
-from pathlib import Path
 import fire
 import json
 import sys
@@ -27,11 +25,11 @@ class App:
         max_chunk_size: int = 2000,
         raw_data: str = "vllm-0.10.1",
         embed: bool = False,
-    ):
+    ) -> None:
         Indexer(raw_data, max_chunk_size, embed).index()
 
     @staticmethod
-    def search(query: str, k: int, embed: bool = False):
+    def search(query: str, k: int, embed: bool = False) -> None:
         print(
             "\n".join(
                 (
@@ -45,7 +43,7 @@ class App:
     @staticmethod
     def search_dataset(
         dataset_path: str, k: int, save_directory: str, embed: bool = False
-    ):
+    ) -> None:
         try:
             dataset, output_path = get_data_and_output_path(
                 RagDataset, dataset_path, save_directory
@@ -57,9 +55,7 @@ class App:
             with open(output_path, "w") as f:
                 json.dump(
                     dump_results_model(
-                        Retriever().search_dataset(
-                            dataset, k, embed
-                        )
+                        Retriever().search_dataset(dataset, k, embed)
                     ),
                     f,
                     indent=4,
@@ -68,13 +64,13 @@ class App:
             print(e, file=sys.stderr)
 
     @staticmethod
-    def answer(query: str, k: int):
-        print(
-            LLModel().answer(query, Retriever(_term_splitter).score(query, k))
-        )
+    def answer(query: str, k: int, embed: bool = False) -> None:
+        print(LLModel().answer(query, Retriever().score(query, k, embed)))
 
     @staticmethod
-    def answer_dataset(student_search_results_path: str, save_directory: str):
+    def answer_dataset(
+        student_search_results_path: str, save_directory: str
+    ) -> None:
         try:
             dataset, output_path = get_data_and_output_path(
                 StudentSearchResults,
@@ -93,7 +89,9 @@ class App:
                                 MinimalAnswer(
                                     question_id=search_result.question_id,
                                     question=search_result.question,
-                                    retrieved_sources=search_result.retrieved_sources,
+                                    retrieved_sources=(
+                                        search_result.retrieved_sources
+                                    ),
                                     answer=LLModel().answer(
                                         search_result.question,
                                         search_result.retrieved_sources,
@@ -116,7 +114,7 @@ class App:
         student_search_results_path: str,
         dataset_path: str,
         max_context_length: int = 2000,
-    ):
+    ) -> None:
         results = get_data(StudentSearchResults, student_search_results_path)
         dataset = get_data(RagDataset, dataset_path)
 

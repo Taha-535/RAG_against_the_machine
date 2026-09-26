@@ -1,13 +1,12 @@
 from src.models import (
     Index,
-    UnansweredQuestion,
     MinimalSource,
     StudentSearchResults,
     RagDataset,
     MinimalSearchResults,
 )
 from src.helper import term_splitter
-from src.llm import LLModel, Embedder
+from src.llm import Embedder
 from pydantic import ValidationError
 from heapq import heappush, heappop
 from tqdm import tqdm
@@ -68,7 +67,7 @@ class Retriever:
 
     def score(
         self, query: str, k: int, embed: bool
-    ) -> list[tuple[int, MinimalSource]]:
+    ) -> list[MinimalSource]:
         query_token_ids = term_splitter(query)
         score_heap = []
 

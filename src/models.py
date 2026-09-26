@@ -33,7 +33,10 @@ class MinimalSource(BaseModel):
         return self._key() < other._key()
 
     def __str__(self) -> str:
-        return f"{self.file_path}[{self.first_character_index}:{self.last_character_index}]"
+        return (
+            f"{self.file_path}[{self.first_character_index}:"
+            f"{self.last_character_index}]"
+        )
 
 
 class FileIndex(BaseModel):

@@ -1,6 +1,5 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from sentence_transformers import SentenceTransformer
-from huggingface_hub import hf_hub_download
 from src.models import MinimalSource
 
 
@@ -44,10 +43,10 @@ class LLModel:
             lst = source.last_character_index
 
             with open(source.file_path) as f:
-                chunks_txt.append(f.read()[fst : lst + 1])
+                chunks_txt.append(f.read()[fst:lst + 1])
 
         prompt = (
-            "Your task is to answer the asked question from the given documents."
+            "Your task is to answer the asked question from these documents."
             + '\nDocuments:\n"'
             + '"\n"'.join(chunks_txt)
             + '"\n'
@@ -71,7 +70,7 @@ class LLModel:
         )
 
         output_ids = generated_ids[0][
-            len(model_inputs.input_ids[0]) :
+            len(model_inputs.input_ids[0]):
         ].tolist()
 
         return self.decode(output_ids)

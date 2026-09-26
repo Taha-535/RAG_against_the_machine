@@ -122,7 +122,10 @@ class Evaluator:
                 answered_question = self._dataset_questions[qui]
             except KeyError:
                 print(
-                    f"Question with question_id {qui} doesn't exist in the dataset",
+                    (
+                        f"Question with question_id {qui} "
+                        "doesn't exist in the dataset"
+                    ),
                     file=sys.stderr,
                 )
                 exit(1)
