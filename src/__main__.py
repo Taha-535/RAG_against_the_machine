@@ -1,8 +1,10 @@
 from src.models import (
+    Index,
     RagDataset,
     StudentSearchResults,
     StudentSearchResultsAndAnswer,
     MinimalAnswer,
+    QueryAnswer,
 )
 from src.helper import (
     get_data,
@@ -14,6 +16,8 @@ from src.evaluate import Evaluator
 from src.search import Retriever
 from src.index import Indexer
 from src.llm import LLModel
+from fastapi import FastAPI
+import pickle
 import fire
 import json
 import sys
@@ -119,6 +123,28 @@ class App:
         dataset = get_data(RagDataset, dataset_path)
 
         Evaluator(results, dataset, max_context_length).evaluate()
+
+
+app = FastAPI()
+
+
+@app.get("/index")
+def index() -> Index:
+    App.index()
+
+    with open("data/processed/index.pkl", "rb") as f:
+        return Index.model_validate(pickle.load(f))
+
+
+@app.get("/answer")
+def answer(query: str, k: int) -> QueryAnswer:
+
+    sources = Retriever().score(query, k, False)
+    answer = LLModel().answer(query, sources)
+
+    return QueryAnswer(
+        question=query, retrieved_sources=sources, answer=answer
+    )
 
 
 if __name__ == "__main__":

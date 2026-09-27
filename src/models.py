@@ -85,3 +85,9 @@ class StudentSearchResults(BaseModel):
 class StudentSearchResultsAndAnswer(BaseModel):
     search_results: List[MinimalAnswer]
     k: int
+
+
+class QueryAnswer(BaseModel):
+    question: str
+    retrieved_sources: List[MinimalSource]
+    answer: str

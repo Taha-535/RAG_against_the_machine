@@ -63,11 +63,12 @@ class Retriever:
             self.index.avg_doc_len,
         )
 
-        self._embedder = Embedder()
+        self._embedder = None
 
-    def score(
-        self, query: str, k: int, embed: bool
-    ) -> list[MinimalSource]:
+    def score(self, query: str, k: int, embed: bool) -> list[MinimalSource]:
+        if embed and self._embedder is None:
+            self._embedder = Embedder()
+
         query_token_ids = term_splitter(query)
         score_heap = []
 
@@ -78,13 +79,19 @@ class Retriever:
         ):
             query_embed = self._embedder.embed(query) if embed else None
 
+            score = self._bm25.bm25(
+                query_token_ids, chunk.terms, chunk.document_length
+            )
+
+            if self._embedder:
+                score *= (
+                    self._embedder.similarity(query_embed, chunk.embedding),
+                )
+
             heappush(
                 score_heap,
                 (
-                    -self._bm25.bm25(
-                        query_token_ids, chunk.terms, chunk.document_length
-                    )
-                    * self._embedder.similarity(query_embed, chunk.embedding),
+                    -score,
                     chunk,
                 ),
             )
@@ -97,6 +104,9 @@ class Retriever:
     def search_dataset(
         self, dataset: RagDataset, k: int, embed: bool
     ) -> StudentSearchResults:
+        if embed and self._embedder is None:
+            self._embedder = Embedder()
+
         search_results = []
 
         for question in tqdm(
