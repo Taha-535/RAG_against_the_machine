@@ -119,11 +119,11 @@ uv run python -m src search "How to enable LoRA?" --k 5 --embed
  │ (py │ md)    │   │ (terms, tf)  │   │ (chunks + statistics)   │
  └──────────────┘   └──────────────┘   └───────────┬────────────┘
                                                    ▼
- question ──────────────────────────────▶  Retriever (BM25)  ──▶ top-k sources
-                                                                      │
-                                              read chunk text from disk│
-                                                                      ▼
-                                    prompt ──▶ Qwen3-0.6B ──▶ answer (JSON)
+ question ──────────────────────────────▶  Retriever (BM25)  ──────▶  top-k sources
+                                                                           │
+                                              read chunk text from disk    │
+                                                                           ▼
+                                    prompt ──▶ Qwen3-0.6B ────────▶  answer (JSON)
 ```
  
 | Module | Role |
