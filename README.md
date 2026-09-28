@@ -114,10 +114,10 @@ uv run python -m src search "How to enable LoRA?" --k 5 --embed
  data/raw/vllm-0.10.1
         │  *.py, *.md
         ▼
- ┌──────────────┐   ┌──────────────┐   ┌────────────────────────┐
- │  Chunking    │──▶│ Tokenizing   │──▶│ data/processed/index.pkl│
- │ (py │ md)    │   │ (terms, tf)  │   │ (chunks + statistics)   │
- └──────────────┘   └──────────────┘   └───────────┬────────────┘
+ ┌──────────────┐   ┌──────────────┐   ┌──────────────────────────┐
+ │  Chunking    │──▶│ Tokenizing   │──▶│ data/processed/index.pkl │
+ │ (py │ md)    │   │ (terms, tf)  │   │ (chunks + statistics)    │
+ └──────────────┘   └──────────────┘   └───────────┬──────────────┘
                                                    ▼
  question ──────────────────────────────▶  Retriever (BM25)  ──────▶  top-k sources
                                                                            │
