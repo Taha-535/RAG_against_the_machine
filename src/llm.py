@@ -35,7 +35,7 @@ class Embedder:
         Returns:
             The embedding vector.
         """
-        return np.asarray(self._model.encode(text))
+        return np.asarray(self._model.encode(text), dtype=np.float64)
 
     def similarity(
         self, embed1: NDArray[Any], embed2: Optional[list[float]]

@@ -8,11 +8,12 @@ from src.models import (
     MinimalSearchResults,
 )
 from src.helper import term_splitter
-from src.llm import Embedder
-from numpy.typing import NDArray
 from pydantic import ValidationError
 from heapq import heappush, heappop
+from numpy.typing import NDArray
 from typing import Any, Optional
+from functools import lru_cache
+from src.llm import Embedder
 from tqdm import tqdm
 import numpy as np
 import pickle
@@ -124,6 +125,7 @@ class Retriever:
 
         self._embedder: Optional[Embedder] = None
 
+    @lru_cache(maxsize=None)
     def score(self, query: str, k: int, embed: bool) -> list[MinimalSource]:
         """Return the top-k chunks for a query.
 

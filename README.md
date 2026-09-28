@@ -214,7 +214,7 @@ Chunk size is set by `--max_chunk_size` (default **2000 characters**, the maximu
 > ["re (regext) - Python"](https://docs.python.org/3/library/re.html)
 > ["ast (Abstract Syntax Tree) - Python"](https://docs.python.org/3/library/ast.html)
 > ["Python fire module"](https://python-fire.readthedocs.io/en/latest/)
-> ["FastAPI starting guide"](https://realpython.com/get-started-with-fastapi/)
+> - ["FastAPI starting guide"](https://realpython.com/get-started-with-fastapi/)
 
 ### How AI was used
  
