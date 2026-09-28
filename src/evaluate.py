@@ -1,14 +1,35 @@
-from src.models import StudentSearchResults, RagDataset, MinimalSource
+"""Local recall@k evaluation (for iteration; the moulinette is official)."""
+
+from src.models import (
+    AnsweredQuestion,
+    MinimalSource,
+    RagDataset,
+    StudentSearchResults,
+)
 import sys
 
 
 class Evaluator:
+    """Compute recall@k of search results against a ground-truth dataset.
+
+    A ground-truth source is found when a retrieved source lies in the
+    same file and overlaps it with an IoU of at least ``0.05``.
+    """
+
     def __init__(
         self,
         search_results: StudentSearchResults,
         dataset: RagDataset,
         max_length: int,
     ) -> None:
+        """Index the questions of both inputs by identifier.
+
+        Args:
+            search_results: The results to evaluate.
+            dataset: The ground-truth dataset.
+            max_length: Maximum allowed length of a retrieved source, in
+                characters.
+        """
         self._dataset_questions = {
             model.question_id: model for model in dataset.rag_questions
         }
@@ -20,7 +41,18 @@ class Evaluator:
 
         self._max_len = max_length
 
+        self._total = 0
+        self._recall: dict[str, float] = {}
+
     def _check_valid(self) -> bool:
+        """Check that the student results respect the subject limits.
+
+        ``k`` must be in ``[1, 10]`` and no source may be longer than the
+        maximum length.
+
+        Returns:
+            Whether the results are valid.
+        """
         if self._k > 10:
             print("Student data has more than 10 sources")
             return False
@@ -59,7 +91,10 @@ class Evaluator:
         return True
 
     def _print_general(self) -> None:
+        """Validate the results and print general statistics.
 
+        The program exits with status 1 if the results are invalid.
+        """
         is_valid = self._check_valid()
 
         print("Student Data is valid:", is_valid)
@@ -69,7 +104,7 @@ class Evaluator:
             self._total = sum(
                 1
                 for question in self._dataset_questions.values()
-                if question.sources
+                if isinstance(question, AnsweredQuestion) and question.sources
             )
             print(
                 "Total number of questions with sources:",
@@ -91,6 +126,15 @@ class Evaluator:
 
     @staticmethod
     def _IoU(chunk1: MinimalSource, chunk2: MinimalSource) -> float:
+        """Compute the intersection over union of two character ranges.
+
+        Args:
+            chunk1: First source.
+            chunk2: Second source.
+
+        Returns:
+            The IoU, or ``0`` if the ranges do not overlap.
+        """
         inter = (
             min(chunk1.last_character_index, chunk2.last_character_index)
             - max(chunk1.first_character_index, chunk2.first_character_index)
@@ -108,7 +152,13 @@ class Evaluator:
 
         return inter / union
 
-    def _evaluate_questions(self):
+    def _evaluate_questions(self) -> None:
+        """Compute recall@1, @3, @5 and @10 over all questions.
+
+        For each ground-truth source, the rank of the first matching
+        retrieved source is looked up, and the source counts as found for
+        every ``k`` at least as large as that rank.
+        """
         self._recall = {
             "recall@1": 0,
             "recall@3": 0,
@@ -129,6 +179,9 @@ class Evaluator:
                     file=sys.stderr,
                 )
                 exit(1)
+
+            if not isinstance(answered_question, AnsweredQuestion):
+                continue
 
             expected_num = len(answered_question.sources)
             if expected_num == 0:
@@ -152,10 +205,11 @@ class Evaluator:
                             break
                         self._recall[f"recall@{k}"] += 1 / expected_num
 
-        for k in self._recall.keys():
-            self._recall[k] /= self._total
+        for name in self._recall.keys():
+            self._recall[name] /= self._total
 
-    def _print_result(self):
+    def _print_result(self) -> None:
+        """Print the recall values."""
         print("Questions evaluated:", self._total)
 
         for k, v in self._recall.items():
@@ -163,7 +217,8 @@ class Evaluator:
 
         print(self._recall)
 
-    def evaluate(self):
+    def evaluate(self) -> None:
+        """Validate the results, compute recall@k and print the report."""
         self._print_general()
 
         print("Evaluation Results")

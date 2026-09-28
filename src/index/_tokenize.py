@@ -1,13 +1,38 @@
+"""Tokenization step: term counts and optional embeddings of each chunk."""
+
+from __future__ import annotations
+
 from tqdm import tqdm
 from ._helper import retrieve_chunk_content
 from src.helper import term_splitter
+from typing import Any, Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .index import Indexer
 
 
-def tokenize_chunk(self):
+def tokenize_chunk(self: Indexer) -> Callable[[dict[str, Any]], None]:
+    """Build the function that tokenizes one chunk.
+
+    Args:
+        self: The indexer.
+
+    Returns:
+        A function filling the ``terms`` (and ``embedding``) of a chunk and
+        updating the document frequencies of the index being built.
+    """
     curr_file = ("", "")
 
-    def perform_tokenization(chunk):
+    def perform_tokenization(chunk: dict[str, Any]) -> None:
+        """Fill the terms and the embedding of a chunk.
+
+        Args:
+            chunk: The chunk, as a dictionary.
+        """
         chunk_txt = retrieve_chunk_content(curr_file, chunk)
+
+        if chunk_txt is None:
+            return
 
         chunk["embedding"] = (
             self._embedder.embed(chunk_txt).tolist()
@@ -25,7 +50,12 @@ def tokenize_chunk(self):
     return perform_tokenization
 
 
-def tokenize(self):
+def tokenize(self: Indexer) -> None:
+    """Tokenize every chunk of the index being built.
+
+    Args:
+        self: The indexer.
+    """
     tokenize_chunk = self._tokenize_chunk()
 
     for chunk in tqdm(

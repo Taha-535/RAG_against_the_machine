@@ -1,19 +1,59 @@
+"""Incremental update of an existing index."""
+
+from __future__ import annotations
+
 from tqdm import tqdm
+from time import time
 from ._helper import retrieve_chunk_content
+from typing import Any, Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .index import Indexer
 
 
-def update_embedding(self) -> callable:
+def update_embedding(self: Indexer) -> Callable[[dict[str, Any]], None]:
+    """Build the function that (re)computes the embedding of one chunk.
+
+    Args:
+        self: The indexer.
+
+    Returns:
+        A function filling the ``embedding`` of a chunk.
+    """
     curr_file = ("", "")
 
-    def main_function(chunk) -> list[float]:
+    def main_function(chunk: dict[str, Any]) -> None:
+        """Compute and store the embedding of a chunk.
+
+        Args:
+            chunk: The chunk, as a dictionary.
+
+        Raises:
+            RuntimeError: If the indexer has no embedder.
+        """
+        if self._embedder is None:
+            raise RuntimeError("No embedder available")
+
         chunk_txt = retrieve_chunk_content(curr_file, chunk)
+
+        if chunk_txt is None:
+            return
 
         chunk["embedding"] = self._embedder.embed(chunk_txt).tolist()
 
     return main_function
 
 
-def update_index(self) -> None:
+def update_index(self: Indexer) -> None:
+    """Update the loaded index: only new or modified files are re-indexed.
+
+    Files that disappeared are dropped. The collection statistics (number
+    of chunks, average length, term document frequencies) are recomputed
+    from the chunks.
+
+    Args:
+        self: The indexer.
+    """
     self._result["documents_number"] = 0
     self._result["avg_doc_len"] = 0
     self._result["term_appearances"] = {}
@@ -24,10 +64,10 @@ def update_index(self) -> None:
         self.data_collection_path.glob("**/*.py")
     )
 
-    for file in set(self._result["files"].keys()).difference(
+    for stale in set(self._result["files"].keys()).difference(
         {str(path) for path in paths}
     ):
-        del self._result["files"][file]
+        del self._result["files"][stale]
 
     update_embedding = self._update_embedding()
 
@@ -40,14 +80,13 @@ def update_index(self) -> None:
         file = self._result["files"].get(str(path))
 
         if file is None or file["last_index"] < path.stat().st_mtime:
-            self._chunk_file(
-                path,
-                self.max_chunk_size,
-                path.stat().st_size,
-            )
+            self._result["files"][str(path)] = {
+                "last_index": time(),
+                "chunks": [],
+            }
+            self._chunk_file(path, self.max_chunk_size)
 
-            if file is None:
-                file = self._result["files"][str(path)]
+            file = self._result["files"][str(path)]
 
             for chunk in file["chunks"]:
                 tokenize_chunk(chunk)

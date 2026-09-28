@@ -1,16 +1,17 @@
 RUN = uv run
+ARGS ?= --help
 
 install:
 	uv sync
 
 run:
-	$(RUN) python -m src
+	$(RUN) python -m src $(ARGS)
 
 debug:
 	$(RUN) python -m pdb -m src
 
 clean:
-	rm -rf $$(find . -type d \( -name "__pycache__" -o -name ".mypy_cache" \))
+	rm -rf $$(find . -type d \( -name "__pycache__" -o -name ".mypy_cache" -o -name ".ruff_cache" \))
 
 lint:
 	 $(RUN) -m flake8 src

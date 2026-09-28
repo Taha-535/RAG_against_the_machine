@@ -1,21 +1,37 @@
+"""Indexer: builds, updates and persists the lexical index."""
+
 from ._chunk import chunk_md, get_chunk_size, chunk_py, chunk_file, chunk
 from ._tokenize import tokenize, tokenize_chunk
 from ._update import update_index, update_embedding
 from src.llm import Embedder
 from pydantic import ValidationError
 from src.models import Index
-from typing import Optional
+from typing import Any, Optional
 from pathlib import Path
 import pickle
 
 
 class Indexer:
+    """Chunk a corpus, tokenize the chunks and persist the index.
+
+    The index is saved as a pickle in ``data/processed/index.pkl``. If it
+    already exists and is valid, it is updated instead of rebuilt.
+    """
+
     def __init__(
         self,
         data_collection_path: str,
         max_chunk_size: int,
         embed: bool,
     ) -> None:
+        """Configure the indexer.
+
+        Args:
+            data_collection_path: Name of the corpus folder in
+                ``data/raw/``.
+            max_chunk_size: Maximum chunk size, in characters.
+            embed: Whether to compute a sentence embedding per chunk.
+        """
         self.data_collection_path = Path(f"data/raw/{data_collection_path}")
         self.max_chunk_size = max_chunk_size
 
@@ -23,7 +39,14 @@ class Indexer:
 
         self._embedder: Optional[Embedder] = Embedder() if embed else None
 
-    def index(self):
+        self._result: dict[str, Any] = {}
+
+    def index(self) -> None:
+        """Build the index, or update it if a valid one already exists.
+
+        The index is rebuilt from scratch when the file is missing, empty,
+        invalid, or older than the indexing code.
+        """
         try:
             try:
                 with open(self._index_file, "rb") as f:
@@ -31,6 +54,9 @@ class Indexer:
 
                 if not loaded.files:
                     raise ValueError("Found Empty index file")
+
+                if loaded.max_chunk_size != self.max_chunk_size:
+                    raise ValueError("max_chunk_size Changed")
 
                 file_name = list(loaded.files.keys())[0]
                 if (
@@ -59,11 +85,13 @@ class Indexer:
             pickle.dump(self._result, f)
 
     def _init_index(self) -> None:
+        """Build a brand new index: chunk, then tokenize."""
         self._result = {
             "files": {},
             "term_appearances": {},
             "documents_number": 0,
             "avg_doc_len": 0,
+            "max_chunk_size": self.max_chunk_size
         }
 
         self._chunk()
