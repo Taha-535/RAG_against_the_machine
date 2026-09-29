@@ -33,6 +33,12 @@ class Indexer:
             embed: Whether to compute a sentence embedding per chunk.
         """
         self.data_collection_path = Path(f"data/raw/{data_collection_path}")
+
+        if not self.data_collection_path.is_dir():
+            raise IOError(
+                f"Couldn't find directory '{str(self.data_collection_path)}'"
+            )
+
         self.max_chunk_size = max_chunk_size
 
         self._index_file = "data/processed/index.pkl"
@@ -58,13 +64,6 @@ class Indexer:
                 if loaded.max_chunk_size != self.max_chunk_size:
                     raise ValueError("max_chunk_size Changed")
 
-                file_name = list(loaded.files.keys())[0]
-                if (
-                    Path(__file__).stat().st_mtime
-                    > loaded.files[file_name].last_index
-                ):
-                    raise ValueError("Indexing code was changed")
-
                 self._result = loaded.model_dump()
             except FileNotFoundError:
                 print("\n=== Creating Index ===")
@@ -81,8 +80,11 @@ class Indexer:
             print("\n=== Index File Already Exists! Updating Old Index ===")
             self._update_index()
 
-        with open(self._index_file, "wb") as f:
-            pickle.dump(self._result, f)
+        try:
+            with open(self._index_file, "wb") as f:
+                pickle.dump(self._result, f)
+        except IOError as e:
+            raise type(e)(f"Error writing index: {e}")
 
     def _init_index(self) -> None:
         """Build a brand new index: chunk, then tokenize."""

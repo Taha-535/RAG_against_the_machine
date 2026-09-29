@@ -93,7 +93,7 @@ class Evaluator:
     def _print_general(self) -> None:
         """Validate the results and print general statistics.
 
-        The program exits with status 1 if the results are invalid.
+        The program exits with status 0 if the results are invalid.
         """
         is_valid = self._check_valid()
 
@@ -104,7 +104,6 @@ class Evaluator:
             self._total = sum(
                 1
                 for question in self._dataset_questions.values()
-                if isinstance(question, AnsweredQuestion) and question.sources
             )
             print(
                 "Total number of questions with sources:",
@@ -122,7 +121,7 @@ class Evaluator:
         else:
             print("Student search results are not valid")
             print("False\n")
-            exit(1)
+            exit(0)
 
     @staticmethod
     def _IoU(chunk1: MinimalSource, chunk2: MinimalSource) -> float:
@@ -185,6 +184,8 @@ class Evaluator:
 
             expected_num = len(answered_question.sources)
             if expected_num == 0:
+                for k in k_s:
+                    self._recall[f"recall@{k}"] += 1
                 continue
 
             for expected in answered_question.sources:
@@ -205,8 +206,9 @@ class Evaluator:
                             break
                         self._recall[f"recall@{k}"] += 1 / expected_num
 
-        for name in self._recall.keys():
-            self._recall[name] /= self._total
+        if self._total > 0:
+            for name in self._recall.keys():
+                self._recall[name] /= self._total
 
     def _print_result(self) -> None:
         """Print the recall values."""

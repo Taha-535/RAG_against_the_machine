@@ -11,6 +11,7 @@ from pathlib import Path
 from time import time
 from collections import deque
 from typing import Optional, TYPE_CHECKING
+import sys
 
 if TYPE_CHECKING:
     from .index import Indexer
@@ -82,8 +83,12 @@ def chunk_py(self: Indexer, path: Path, n: int) -> list[tuple[int, int]]:
     Returns:
         ``(first, last)`` inclusive character ranges.
     """
-    with open(path) as f:
-        content = f.read()
+    try:
+        with open(path) as f:
+            content = f.read()
+    except IOError as e:
+        print(f"Error reading file: {type(e).__name__}: {e}", file=sys.stderr)
+        exit(1)
 
     new_lines = []
     for i, c in enumerate(content):
@@ -147,14 +152,11 @@ def chunk_file(self: Indexer, path: Path, n: int) -> None:
         path: Path of the file.
         n: Maximum chunk size, in characters.
     """
-    if str(path).endswith(".md"):
+    if path.name.endswith(".md"):
         chunks = self._chunk_md(n, path.stat().st_size)
     else:
         chunks = self._chunk_py(path, n)
 
-    if chunks is None:
-        print(str(path))
-        exit()
     for fst, lst in chunks:
         self._result["files"][str(path)]["chunks"].append(
             {

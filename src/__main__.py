@@ -2,6 +2,7 @@
 
 from src.models import (
     Index,
+    MinimalSource,
     RagDataset,
     StudentSearchResults,
     StudentSearchResultsAndAnswer,
@@ -42,10 +43,13 @@ class App:
             raw_data: Name of the corpus folder in ``data/raw/``.
             embed: Whether to also compute semantic embeddings.
         """
-        Indexer(raw_data, max_chunk_size, embed).index()
+        try:
+            Indexer(raw_data, max_chunk_size, embed).index()
+        except IOError as e:
+            print(f'Error Indexing collection: {type(e).__name__}: {e}')
 
     @staticmethod
-    def search(query: str, k: int, embed: bool = False) -> None:
+    def search(query: str, k: int, embed: bool = False) -> list[MinimalSource]:
         """Print the top-k sources of a single query.
 
         Args:
@@ -53,15 +57,18 @@ class App:
             k: Number of sources to return.
             embed: Whether to weight BM25 with semantic similarity.
         """
+        results = Retriever().score(query, k, embed)
         print(
             "\n".join(
                 (
                     f"{src.file_path} "
                     f"[{src.first_character_index}:{src.last_character_index}]"
                 )
-                for src in Retriever().score(query, k, embed)
+                for src in results
             )
         )
+
+        return results
 
     @staticmethod
     def search_dataset(

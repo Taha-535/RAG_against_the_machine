@@ -1,20 +1,18 @@
 """Language model and sentence embedding wrappers."""
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, logging
-from huggingface_hub.utils import disable_progress_bars, logging as hf_logging
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from huggingface_hub.utils import logging
 from sentence_transformers import SentenceTransformer
 from numpy.typing import NDArray
 from src.models import MinimalSource
 from typing import Any, Optional
 import numpy as np
 import warnings
+import sys
 
 
-warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 logging.set_verbosity_error()
-hf_logging.set_verbosity_error()
-disable_progress_bars()
 
 
 class Embedder:
@@ -22,11 +20,23 @@ class Embedder:
 
     def __init__(self) -> None:
         """Load the sentence-transformers model."""
-        self._model = SentenceTransformer(
-            "sentence-transformers/all-MiniLM-L6-v2"
-        )
+        self.model_name = "sentence-transformers/all-MiniLM-L6-v2"
 
-    def embed(self, text: str) -> NDArray[Any]:
+        try:
+            self._model = SentenceTransformer(
+                self.model_name
+            )
+        except Exception as e:
+            print(
+                (
+                    f"Couldn't load model '{self.model_name}': "
+                    f"{type(e).__name__}: {e}"
+                ),
+                file=sys.stderr
+            )
+            exit(1)
+
+    def embed(self, text: str) -> NDArray[np.float64]:
         """Embed a text.
 
         Args:
@@ -35,7 +45,17 @@ class Embedder:
         Returns:
             The embedding vector.
         """
-        return np.asarray(self._model.encode(text), dtype=np.float64)
+        try:
+            return np.asarray(self._model.encode(text), dtype=np.float64)
+        except Exception as e:
+            print(
+                (
+                    f"Couldn't embed text: "
+                    f"{type(e).__name__}: {e}"
+                ),
+                file=sys.stderr
+            )
+            exit(1)
 
     def similarity(
         self, embed1: NDArray[Any], embed2: Optional[list[float]]
@@ -63,11 +83,22 @@ class LLModel:
     def __init__(self) -> None:
         """Load the tokenizer and the model."""
         self.model_name = "Qwen/Qwen3-0.6B"
-        self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
-        self._model: Any = AutoModelForCausalLM.from_pretrained(
-            self.model_name,
-        )
+        try:
+            self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+
+            self._model: Any = AutoModelForCausalLM.from_pretrained(
+                self.model_name,
+            )
+        except Exception as e:
+            print(
+                (
+                    f"Couldn't load model '{self.model_name}': "
+                    f"{type(e).__name__}: {e}"
+                ),
+                file=sys.stderr
+            )
+            exit(1)
 
     def encode(self, txt: str) -> list[int]:
         """Convert a text into token ids.
@@ -113,9 +144,19 @@ class LLModel:
         for source in sources:
             fst = source.first_character_index
             lst = source.last_character_index
-
-            with open(source.file_path) as f:
-                chunks_txt.append(f.read()[fst:lst + 1])
+            
+            try:
+                with open(source.file_path) as f:
+                    chunks_txt.append(f.read()[fst:lst + 1])
+            except (IOError, Exception) as e:
+                print(
+                    (
+                        f"Error getting chunk from '{source.file_path}': "
+                        f"{type(e).__name__}: {e}"
+                    ),
+                    file=sys.stderr
+                )
+                exit(1)
 
         prompt = (
             "Your task is to answer the asked question from these documents."
@@ -137,9 +178,21 @@ class LLModel:
         model_inputs = self._tokenizer([text], return_tensors="pt").to(
             self._model.device
         )
-        generated_ids = self._model.generate(
-            **model_inputs
-        )
+
+        try:
+            generated_ids = self._model.generate(
+                **model_inputs
+            )
+        except Exception as e:
+            print(
+                (
+                    f"Error generating prompt: "
+                    f"{type(e).__name__}: {e}"
+                ),
+                file=sys.stderr
+            )
+            exit(1)
+
 
         output_ids = generated_ids[0][
             len(model_inputs.input_ids[0]):
