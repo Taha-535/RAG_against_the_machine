@@ -1,8 +1,8 @@
 """Small helpers shared by the CLI, the retriever and the indexer."""
 
 from pydantic import ValidationError, BaseModel
+from typing import TypeVar, Any
 from pathlib import Path
-from typing import Any, TypeVar
 import sys
 import re
 
@@ -24,7 +24,7 @@ def get_data(model: type[ModelT], data_path: str) -> ModelT:
     """
     try:
         with open(data_path) as f:
-            dataset = model.model_validate_json(f.read())
+            dataset: ModelT = model.model_validate_json(f.read())
     except IOError as e:
         print(
             "Error loading dataset!",

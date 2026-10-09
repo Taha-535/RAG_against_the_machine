@@ -144,7 +144,7 @@ class LLModel:
         for source in sources:
             fst = source.first_character_index
             lst = source.last_character_index
-            
+
             try:
                 with open(source.file_path) as f:
                     chunks_txt.append(f.read()[fst:lst + 1])
@@ -192,7 +192,6 @@ class LLModel:
                 file=sys.stderr
             )
             exit(1)
-
 
         output_ids = generated_ids[0][
             len(model_inputs.input_ids[0]):

@@ -81,6 +81,8 @@ class Indexer:
             self._update_index()
 
         try:
+            Path(self._index_file).parent.mkdir(parents=True, exist_ok=True)
+
             with open(self._index_file, "wb") as f:
                 pickle.dump(self._result, f)
         except IOError as e:
