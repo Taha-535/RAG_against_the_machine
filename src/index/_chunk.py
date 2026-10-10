@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from .index import Indexer
 
 
-def chunk_md(n: int, txt_len: int) -> list[tuple[int, int]]:
+def chunk_md(path: Path, n: int) -> list[tuple[int, int]]:
     """Split a Markdown/text file into consecutive fixed-size windows.
 
     Args:
@@ -27,15 +27,10 @@ def chunk_md(n: int, txt_len: int) -> list[tuple[int, int]]:
     Returns:
         ``(first, last)`` inclusive character ranges covering the file.
     """
-    result: list[tuple[int, int]] = []
+    with open(path) as f:
+        txt_len = len(f.read())
 
-    for k in range(txt_len // n + 1):
-        fst = k * n
-        lst = fst + n - 1 if fst + n < txt_len else txt_len - 1
-
-        result.append((fst, lst))
-
-    return result
+    return [(fst, min(fst + n, txt_len) - 1) for fst in range(0, txt_len, n)]
 
 
 def get_chunk_size(
@@ -54,18 +49,20 @@ def get_chunk_size(
     """
     end = node1 if node2 is None else node2
 
-    bl, bc = node1.lineno, node1.col_offset
-    el = end.end_lineno if end.end_lineno is not None else end.lineno
-    ec = (
+    beg_line, beg_col = node1.lineno, node1.col_offset
+    end_line = end.end_lineno if end.end_lineno is not None else end.lineno
+    end_col = (
         end.end_col_offset
         if end.end_col_offset is not None
         else end.col_offset
     )
 
-    bi = new_lines[bl - 2] + bc + 1 if bl > 1 else bc
-    ei = new_lines[el - 2] + ec if el > 1 else ec
+    beg_idx = (
+        new_lines[beg_line - 2] + beg_col + 1 if beg_line > 1 else beg_col
+    )
+    end_idx = new_lines[end_line - 2] + end_col if end_line > 1 else end_col
 
-    return (bi, ei, ei - bi + 1)
+    return (beg_idx, end_idx, end_idx - beg_idx + 1)
 
 
 def chunk_py(self: Indexer, path: Path, n: int) -> list[tuple[int, int]]:
@@ -83,12 +80,8 @@ def chunk_py(self: Indexer, path: Path, n: int) -> list[tuple[int, int]]:
     Returns:
         ``(first, last)`` inclusive character ranges.
     """
-    try:
-        with open(path) as f:
-            content = f.read()
-    except IOError as e:
-        print(f"Error reading file: {type(e).__name__}: {e}", file=sys.stderr)
-        exit(1)
+    with open(path) as f:
+        content = f.read()
 
     new_lines = []
     for i, c in enumerate(content):
@@ -102,7 +95,7 @@ def chunk_py(self: Indexer, path: Path, n: int) -> list[tuple[int, int]]:
     while groups:
         curr = groups.popleft()
 
-        if self._get_chunk_size(new_lines, curr)[2] > n:
+        if self._get_chunk_size(new_lines, curr)[2] >= n:
             if hasattr(curr, "body"):
                 for node in curr.body[::-1]:
                     groups.appendleft(node)
@@ -152,10 +145,14 @@ def chunk_file(self: Indexer, path: Path, n: int) -> None:
         path: Path of the file.
         n: Maximum chunk size, in characters.
     """
-    if path.name.endswith(".md"):
-        chunks = self._chunk_md(n, path.stat().st_size)
-    else:
-        chunks = self._chunk_py(path, n)
+    try:
+        if path.name.endswith(".md"):
+            chunks = self._chunk_md(path, n)
+        else:
+            chunks = self._chunk_py(path, n)
+    except (SyntaxError, IOError) as e:
+        print(f"Error reading file: {type(e).__name__}: {e}", file=sys.stderr)
+        exit(1)
 
     for fst, lst in chunks:
         self._result["files"][str(path)]["chunks"].append(

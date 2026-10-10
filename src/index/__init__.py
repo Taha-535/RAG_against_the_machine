@@ -1,6 +1,6 @@
 """Indexing package: chunking, tokenization and index persistence."""
 
-from .index import Indexer
+from ._index import Indexer
 
 
 __all__ = ["Indexer"]

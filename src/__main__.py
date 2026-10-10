@@ -19,7 +19,7 @@ import sys
 
 try:
     import fire
-    from models import MinimalSource
+    from src.models import MinimalSource
     from src import pipeline
 except ImportError as e:
     print(
