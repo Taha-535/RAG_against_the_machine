@@ -1,6 +1,6 @@
 """Indexer: builds, updates and persists the lexical index."""
 
-from ._chunk import chunk_md, get_chunk_size, chunk_py, chunk_file, chunk
+from ._chunk import chunk_txt, get_chunk_size, chunk_py, chunk_file, chunk
 from ._tokenize import tokenize, tokenize_chunk
 from ._update import update_index, update_embedding
 from src.llm import Embedder
@@ -106,7 +106,7 @@ class Indexer:
 
     _update_index = update_index
 
-    _chunk_md = staticmethod(chunk_md)
+    _chunk_txt = staticmethod(chunk_txt)
 
     _get_chunk_size = staticmethod(get_chunk_size)
 

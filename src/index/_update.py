@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from tqdm import tqdm
 from time import time
-from ._helper import retrieve_chunk_content
+from ._helper import get_chunk_content
 from typing import Any, Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -31,13 +31,12 @@ def update_embedding(self: Indexer) -> Callable[[dict[str, Any]], None]:
         Raises:
             RuntimeError: If the indexer has no embedder.
         """
+        nonlocal curr_file
+
         if self._embedder is None:
             raise RuntimeError("No embedder available")
 
-        chunk_txt = retrieve_chunk_content(curr_file, chunk)
-
-        if chunk_txt is None:
-            return
+        curr_file, chunk_txt = get_chunk_content(curr_file, chunk)
 
         chunk["embedding"] = self._embedder.embed(chunk_txt).tolist()
 
@@ -61,7 +60,8 @@ def update_index(self: Indexer) -> None:
     tokenize_chunk = self._tokenize_chunk()
 
     paths = list(self.data_collection_path.glob("**/*.md")) + list(
-        self.data_collection_path.glob("**/*.py")
+        self.data_collection_path.glob("**/*.py")) + list(
+        self.data_collection_path.glob("**/*.txt")
     )
 
     for stale in set(self._result["files"].keys()).difference(

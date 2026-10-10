@@ -1,4 +1,4 @@
-"""Language model wrapper sentence embedding wrappers."""
+"""Language model wrapper."""
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from huggingface_hub.utils import logging

@@ -17,16 +17,16 @@ Usage: ``uv run python -m src <command> [options]``
 from typing import Callable, Any
 import sys
 
-try:
-    import fire
-    from src.models import MinimalSource
-    from src import pipeline
-except ImportError as e:
-    print(
-        f"ImportError: {e}. Run `uv sync` or `make install` first!",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+# try:
+import fire
+from src.models import MinimalSource
+from src import pipeline
+# except ImportError as e:
+#     print(
+#         f"ImportError: {e}. Run `uv sync` or `make install` first!",
+#         file=sys.stderr,
+#     )
+#     sys.exit(1)
 
 
 def index(

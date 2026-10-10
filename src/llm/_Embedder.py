@@ -1,4 +1,4 @@
-"""sentence embedding wrappers."""
+"""sentence embedding wrapper."""
 from sentence_transformers import SentenceTransformer
 from typing import Any, Optional
 from numpy.typing import NDArray

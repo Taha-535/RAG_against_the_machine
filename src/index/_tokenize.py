@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tqdm import tqdm
-from ._helper import retrieve_chunk_content
+from ._helper import get_chunk_content
 from src.helper import term_splitter
 from typing import Any, Callable, TYPE_CHECKING
 
@@ -29,10 +29,9 @@ def tokenize_chunk(self: Indexer) -> Callable[[dict[str, Any]], None]:
         Args:
             chunk: The chunk, as a dictionary.
         """
-        chunk_txt = retrieve_chunk_content(curr_file, chunk)
+        nonlocal curr_file
 
-        if chunk_txt is None:
-            return
+        curr_file, chunk_txt = get_chunk_content(curr_file, chunk)
 
         chunk["embedding"] = (
             self._embedder.embed(chunk_txt).tolist()

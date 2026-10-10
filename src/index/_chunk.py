@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from .index import Indexer
 
 
-def chunk_md(path: Path, n: int) -> list[tuple[int, int]]:
+def chunk_txt(path: Path, n: int) -> list[tuple[int, int]]:
     """Split a Markdown/text file into consecutive fixed-size windows.
 
     Args:
@@ -29,6 +29,9 @@ def chunk_md(path: Path, n: int) -> list[tuple[int, int]]:
     """
     with open(path) as f:
         txt_len = len(f.read())
+
+    if not txt_len:
+        return []
 
     return [(fst, min(fst + n, txt_len) - 1) for fst in range(0, txt_len, n)]
 
@@ -82,6 +85,9 @@ def chunk_py(self: Indexer, path: Path, n: int) -> list[tuple[int, int]]:
     """
     with open(path) as f:
         content = f.read()
+
+    if not content:
+        return []
 
     new_lines = []
     for i, c in enumerate(content):
@@ -146,13 +152,16 @@ def chunk_file(self: Indexer, path: Path, n: int) -> None:
         n: Maximum chunk size, in characters.
     """
     try:
-        if path.name.endswith(".md"):
-            chunks = self._chunk_md(path, n)
-        else:
+        if path.name.endswith(".py"):
             chunks = self._chunk_py(path, n)
+        else:
+            chunks = self._chunk_txt(path, n)
     except (SyntaxError, IOError) as e:
         print(f"Error reading file: {type(e).__name__}: {e}", file=sys.stderr)
         exit(1)
+
+    if not chunks:
+        return
 
     for fst, lst in chunks:
         self._result["files"][str(path)]["chunks"].append(
@@ -178,6 +187,7 @@ def chunk(self: Indexer) -> None:
     """
     for path in tqdm(
         list(self.data_collection_path.glob("**/*.md"))
+        + list(self.data_collection_path.glob("**/*.txt"))
         + list(self.data_collection_path.glob("**/*.py")),
         ascii=True,
         desc="Chunking",
