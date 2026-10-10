@@ -15,7 +15,7 @@ app = FastAPI()
 
 
 @app.get("/")
-def root():
+def root() -> dict[str, str | list[str]]:
     return {
         "name": "RAG against the machine",
         "docs": "/docs",

@@ -1,15 +1,10 @@
-"""Language model and sentence embedding wrappers."""
+"""Language model wrapper sentence embedding wrappers."""
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from huggingface_hub.utils import logging
 from src.models import MinimalSource
 from typing import Any
-import warnings
 import sys
-
-
-warnings.filterwarnings("ignore", category=UserWarning)
-logging.set_verbosity_error()
 
 
 class LLModel:
@@ -17,6 +12,8 @@ class LLModel:
 
     def __init__(self) -> None:
         """Load the tokenizer and the model."""
+        logging.set_verbosity_error()
+
         self.model_name = "Qwen/Qwen3-0.6B"
 
         try:
