@@ -1,7 +1,6 @@
 """Language model wrapper."""
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from huggingface_hub.utils import logging
 from src.models import MinimalSource
 from typing import Any
 import sys
@@ -12,8 +11,6 @@ class LLModel:
 
     def __init__(self) -> None:
         """Load the tokenizer and the model."""
-        logging.set_verbosity_error()
-
         self.model_name = "Qwen/Qwen3-0.6B"
 
         try:
