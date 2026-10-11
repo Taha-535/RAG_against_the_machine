@@ -101,7 +101,7 @@ def answer(query: str, k: int, embed: bool = False) -> QueryAnswer:
         )
 
     try:
-        return pipeline.answer_query(query, k)
+        return pipeline.answer_query(query, k, embed)
     except SystemExit:
         raise HTTPException(
             status_code=503, detail="Index or model unavailable"

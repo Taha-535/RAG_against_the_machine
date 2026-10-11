@@ -3,13 +3,9 @@
 Only ``index``, ``search``, ``search_dataset``, ``answer``,
 ``answer_dataset`` and ``evaluate`` are reachable from the command line.
 
-``fire.Fire`` is never given a container (module, dict, class or instance):
-whatever the container, Fire falls back on ``dir()`` when a name is not one
-of its keys, which would let ``__new__``, ``__class__``, ``keys``, imported
-modules, etc. be reached. Instead, the command name is looked up here in a
-private table and Fire is handed that single function. Any other name is
-rejected before Fire runs. Every command returns ``None`` so Fire has no
-returned object to navigate into either.
+``fire.Fire`` is never given a container (module, dict, class or instance).
+Instead, the command name is looked up here in a private table and Fire is
+handed that single function. Any other name is rejected before Fire runs.
 
 Usage: ``uv run python -m src <command> [options]``
 """
@@ -17,16 +13,16 @@ Usage: ``uv run python -m src <command> [options]``
 from typing import Callable, Any
 import sys
 
-# try:
-import fire
-from src.models import MinimalSource
-from src import pipeline
-# except ImportError as e:
-#     print(
-#         f"ImportError: {e}. Run `uv sync` or `make install` first!",
-#         file=sys.stderr,
-#     )
-#     sys.exit(1)
+try:
+    import fire
+    from src.models import MinimalSource
+    from src import pipeline
+except ImportError as e:
+    print(
+        f"ImportError: {e}. Run `uv sync` or `make install` first!",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def index(

@@ -101,9 +101,17 @@ def chunk_py(self: Indexer, path: Path, n: int) -> list[tuple[int, int]]:
     while groups:
         curr = groups.popleft()
 
-        if self._get_chunk_size(new_lines, curr)[2] >= n:
-            if hasattr(curr, "body"):
-                for node in curr.body[::-1]:
+        if self._get_chunk_size(new_lines, curr)[2] > n:
+            children = []
+
+            for attr in ("body", "handlers", "orelse", "finalbody", "cases"):
+                if hasattr(curr, attr):
+                    val = getattr(curr, attr)
+                    if isinstance(val, list):
+                        children.extend(val)
+
+            if children:
+                for node in reversed(children):
                     groups.appendleft(node)
             else:
                 bi, ei, chunk_len = self._get_chunk_size(new_lines, curr)
@@ -111,11 +119,10 @@ def chunk_py(self: Indexer, path: Path, n: int) -> list[tuple[int, int]]:
                 while chunk_len / i > n:
                     i += 1
 
-                for j in range(i + 1):
-                    fst = bi + j * (chunk_len // i)
-                    lst = min(ei, fst + (chunk_len // i))
+                step = (chunk_len + i - 1) // i
 
-                    result.append((fst, lst))
+                for fst in range(bi, ei + 1, step):
+                    result.append((fst, min(ei, fst + step - 1)))
 
         else:
             merge_idx = -1
