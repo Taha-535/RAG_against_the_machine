@@ -55,6 +55,9 @@ class Indexer:
         """
         try:
             try:
+                if not Path(self._index_file).is_file():
+                    raise IOError
+
                 with open(self._index_file, "rb") as f:
                     loaded = Index.model_validate(pickle.load(f))
 
@@ -95,7 +98,7 @@ class Indexer:
             "term_appearances": {},
             "documents_number": 0,
             "avg_doc_len": 0,
-            "max_chunk_size": self.max_chunk_size
+            "max_chunk_size": self.max_chunk_size,
         }
 
         self._chunk()
