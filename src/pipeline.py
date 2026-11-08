@@ -30,7 +30,7 @@ import json
 import sys
 
 
-strict_conf = ConfigDict(strict=True)
+strict_conf = ConfigDict(strict=True, str_strip_whitespace=True)
 
 
 @validate_call(config=strict_conf)

@@ -141,7 +141,11 @@ def format_pydantic_error(e: ValidationError, command: Callable) -> str:
     msgs = []
 
     for err in e.errors(include_url=False):
-        name = list(inspect.signature(command).parameters)[int(err["loc"][0])]
+        name = (
+            list(inspect.signature(command).parameters)[int(err["loc"][0])]
+            if isinstance(err["loc"][0], int)
+            else err["loc"][0]
+        )
 
         msgs.append(
             f"Invalid '{name}' argument! {err['msg']}, got '{err['input']}'"

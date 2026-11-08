@@ -193,3 +193,6 @@ class QueryAnswer(BaseModel):
     question: str
     retrieved_sources: List[MinimalSource]
     answer: str
+
+    def __str__(self) -> str:
+        return self.answer

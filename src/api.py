@@ -5,6 +5,8 @@ Run with ``uv run uvicorn src.api:app``. It only depends on
 independently of which commands the CLI exposes.
 """
 
+import sys
+
 try:
     from src.helper import format_pydantic_error
     from fastapi import FastAPI, HTTPException
