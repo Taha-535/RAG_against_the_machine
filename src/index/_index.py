@@ -1,14 +1,17 @@
 """Indexer: builds, updates and persists the lexical index."""
 
-from ._chunk import chunk_txt, get_chunk_size, chunk_py, chunk_file, chunk
-from ._tokenize import tokenize, tokenize_chunk
+from ._chunking import Chunker, PythonChunker, TextChunker
 from ._update import update_index, update_embedding
-from src.llm import Embedder
+from ._tokenize import tokenize, tokenize_chunk
 from pydantic import ValidationError
-from src.models import Index
 from typing import Any, Optional
+from src.llm import Embedder
+from src.models import Index
 from pathlib import Path
+from tqdm import tqdm
+from time import time
 import pickle
+import sys
 
 
 class Indexer:
@@ -40,6 +43,12 @@ class Indexer:
             )
 
         self.max_chunk_size = max_chunk_size
+
+        self._chunkers: dict[str, Chunker] = {
+            ".py": PythonChunker(max_chunk_size),
+            ".txt": TextChunker(max_chunk_size),
+            ".md": TextChunker(max_chunk_size),
+        }
 
         self._index_file = "data/processed/index.pkl"
 
@@ -109,19 +118,69 @@ class Indexer:
 
         self._tokenize()
 
+    def _chunk_file(self, path: Path) -> None:
+        """Chunk one file and register its chunks in the index being built.
+
+        Markdown files use ``chunk_md``; every other file is treated as Python.
+        The entry ``self._result["files"][str(path)]`` must already exist.
+
+        Args:
+            self: The indexer.
+            path: Path of the file.
+            n: Maximum chunk size, in characters.
+        """
+        try:
+            chunks = self._chunkers[path.suffix].chunk(path)
+        except (SyntaxError, IOError) as e:
+            print(
+                f"Error reading file: {type(e).__name__}: {e}", file=sys.stderr
+            )
+            exit(1)
+
+        if not chunks:
+            return
+
+        for fst, lst in chunks:
+            self._result["files"][str(path)]["chunks"].append(
+                {
+                    "file_path": str(path),
+                    "first_character_index": fst,
+                    "last_character_index": lst,
+                    "document_length": lst - fst + 1,
+                    "terms": {},
+                    "embedding": None,
+                }
+            )
+
+            self._result["documents_number"] += 1
+            self._result["avg_doc_len"] += lst - fst + 1
+
+    def _chunk(self) -> None:
+        """Chunk every Markdown and Python file of the corpus.
+
+        Args:
+            self: The indexer.
+        """
+        for path in tqdm(
+            list(self.data_collection_path.glob("**/*.md"))
+            + list(self.data_collection_path.glob("**/*.txt"))
+            + list(self.data_collection_path.glob("**/*.py")),
+            ascii=True,
+            desc="Chunking",
+            unit="file",
+        ):
+            self._result["files"][str(path)] = {
+                "last_index": time(),
+                "chunks": [],
+            }
+
+            self._chunk_file(path)
+
+        self._result["avg_doc_len"] /= self._result["documents_number"]
+
     _update_embedding = update_embedding
 
     _update_index = update_index
-
-    _chunk_txt = staticmethod(chunk_txt)
-
-    _get_chunk_size = staticmethod(get_chunk_size)
-
-    _chunk_py = chunk_py
-
-    _chunk_file = chunk_file
-
-    _chunk = chunk
 
     _tokenize_chunk = tokenize_chunk
 
